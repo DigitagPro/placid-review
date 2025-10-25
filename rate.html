@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Laissez une note</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="card">
+    <h1 id="biz-name">Votre expérience</h1>
+    <p>Choisissez une note :</p>
+    <div class="stars" id="stars" aria-label="Choisir une note de 1 à 5">
+      <button data-value="1" aria-label="1 étoile">★</button>
+      <button data-value="2" aria-label="2 étoiles">★</button>
+      <button data-value="3" aria-label="3 étoiles">★</button>
+      <button data-value="4" aria-label="4 étoiles">★</button>
+      <button data-value="5" aria-label="5 étoiles">★</button>
+    </div>
+    <button id="submit" disabled>Envoyer</button>
+    <p id="msg" class="msg"></p>
+  </main>
+
+  <script>
+    // Apps Script Web App (même URL pour API et logs)
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbzDZlUPV63mcL1a5NIq_Sj1ia0MCzUrcQX41I7yG8R85bkOsOHxFnEOoj0atOh43YZV/exec';
+    const LOG_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzDZlUPV63mcL1a5NIq_Sj1ia0MCzUrcQX41I7yG8R85bkOsOHxFnEOoj0atOh43YZV/exec';
+    const LOW_STARS_MAX = 3; // 1..3 → formulaire, 4..5 → Google
+
+    (async function init(){
+      const params = new URLSearchParams(location.search);
+      const businessId = params.get('id') || '';
+      const plaqueId = params.get('plaque') || '';
+
+      if (!businessId) {
+        document.getElementById('msg').textContent = 'Paramètre ?id manquant.';
+        return;
+      }
+
+      // 1) Récupérer config depuis le Sheet via Apps Script
+      let biz;
+      try {
+        const res = await fetch(`${API_BASE}?id=${encodeURIComponent(businessId)}`, { cache:'no-store' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'API error');
+        biz = data;
+      } catch (e) {
+        document.getElementById('msg').textContent = 'Erreur de configuration.';
+        return;
+      }
+
+      document.getElementById('biz-name').textContent = biz.name || 'Votre expérience';
+
+      // 2) UI étoiles
+      const starsEl = document.getElementById('stars');
+      const buttons = [...starsEl.querySelectorAll('button')];
+      const submit = document.getElementById('submit');
+      let rating = 0;
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          rating = Number(btn.dataset.value);
+          buttons.forEach(b => b.classList.toggle('active', Number(b.dataset.value) <= rating));
+          submit.disabled = false;
+          submit.classList.add('enabled');
+          document.getElementById('msg').textContent = `Note sélectionnée : ${rating} ★`;
+        });
+      });
+
+      // 3) Envoi + redirection
+      submit.addEventListener('click', async () => {
+        if (!rating) return;
+
+        // log (non bloquant)
+        const payload = {
+          ts: new Date().toISOString(),
+          business_id: businessId,
+          plaque_id: plaqueId || '',
+          rating,
+          userAgent: navigator.userAgent,
+          referer: document.referrer
+        };
+        try {
+          navigator.sendBeacon?.(LOG_ENDPOINT, JSON.stringify(payload)) ||
+          await fetch(LOG_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        } catch {}
+
+        // redirect
+        if (rating <= LOW_STARS_MAX) {
+          location.href = biz.lowRatingFormUrl || '#';
+        } else {
+          location.href = biz.googleReviewUrl || '#';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
