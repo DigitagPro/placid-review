@@ -1,0 +1,71 @@
+:root{
+  --bg:#f6f8fc;
+  --card:#ffffff;
+  --ink:#0b1324;
+  --muted:#606b85;
+  --primary:#1a73e8;         /* bleu pro */
+  --primary-ink:#fff;
+  --ring:rgba(26,115,232,.22);
+  --star:#ffb300;            /* or doux */
+  --star-bg:#eef3fd;
+  --shadow:0 10px 30px rgba(0,0,0,.08);
+  --radius:18px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--ink); background:var(--bg);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+
+.appbar{
+  position:sticky; top:0; z-index:5;
+  background:linear-gradient(90deg, #f7f9ff, #eef3fd);
+  border-bottom:1px solid #e7ecf7;
+}
+.brand{max-width:920px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:10px;font-weight:700;color:#234;}
+.brand svg{fill:var(--primary)}
+
+.container{max-width:920px;margin:28px auto;padding:0 20px;}
+.card{
+  background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+  padding:26px 22px;
+}
+.card-head{display:flex;gap:14px;align-items:center;margin-bottom:12px;}
+.avatar{
+  width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
+  background:var(--star-bg);
+}
+.titles h1{font-size:1.25rem;margin:0 0 4px}
+.muted{color:var(--muted)}
+.tiny{font-size:.84rem}
+.hint{margin:.35rem 0 0}
+
+.field{margin:14px 0 18px;}
+.label{display:block;font-weight:600;margin-bottom:8px;color:#223}
+
+.stars{display:flex;gap:10px;flex-wrap:wrap}
+.stars button{
+  font-size:28px; line-height:1; cursor:pointer; border:none;
+  padding:10px 14px; border-radius:12px;
+  background:#eef1f6; color:#92a0b6;
+  transition:transform .08s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.stars button:hover{transform:translateY(-1px); background:#e7edf8; color:#5d6b83}
+.stars button.active{
+  background:var(--star-bg); color:var(--star);
+  box-shadow:0 0 0 4px var(--ring);
+}
+
+.btn{
+  width:100%; appearance:none; border:none; cursor:pointer;
+  padding:14px 16px; border-radius:12px;
+  background:var(--primary); color:var(--primary-ink); font-weight:700;
+  letter-spacing:.2px; transition:filter .15s ease, transform .05s ease; opacity:.85;
+}
+.btn:hover{filter:brightness(.98); opacity:1}
+.btn:active{transform:scale(.997)}
+.btn:disabled{opacity:.55; cursor:not-allowed; filter:grayscale(.15)}
+
+.foot{max-width:920px;margin:18px auto 28px; padding:0 20px; text-align:center;}
