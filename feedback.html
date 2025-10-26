@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Votre retour</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;
+       display:flex;align-items:center;justify-content:center;min-height:100vh;}
+  .formbox{max-width:420px;width:100%;padding:30px;border:1px solid #eee;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.05);}
+  h1{font-size:1.4rem;margin-bottom:16px;}
+  label{display:block;font-weight:600;margin:10px 0 6px;}
+  input,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #ddd;font:inherit;}
+  textarea{min-height:120px;resize:vertical;}
+  button{margin-top:16px;width:100%;background:#1a73e8;color:#fff;font-weight:600;border:none;border-radius:10px;
+         padding:12px 16px;cursor:pointer;transition:filter .15s;}
+  button:hover{filter:brightness(0.97);}
+  .ok{text-align:center;margin-top:14px;color:#1a73e8;display:none;}
+</style>
+</head>
+<body>
+<div class="formbox">
+  <h1>Votre retour</h1>
+  <form id="f">
+    <label>Nom</label>
+    <input name="nom" required>
+    <label>Prénom</label>
+    <input name="prenom" required>
+    <label>Commentaire</label>
+    <textarea name="commentaire" required></textarea>
+    <button type="submit">Envoyer</button>
+    <div id="ok" class="ok">✅ Merci pour votre retour !</div>
+  </form>
+</div>
+
+<script>
+const LOG_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzDZlUPV63mcL1a5NIq_Sj1ia0MCzUrcQX41I7yG8R85bkOsOHxFnEOoj0atOh43YZV/exec';
+
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const d = e.target;
+  const qs = new URLSearchParams(location.search);
+  const payload = {
+    feedbackProxy: true,      // déclenche le proxy Google Forms côté Apps Script
+    nom: d.nom.value,
+    prenom: d.prenom.value,
+    commentaire: d.commentaire.value,
+    ts: new Date().toISOString(),
+    business_id: qs.get('id') || '',
+    plaque_id: qs.get('plaque') || '',
+    rating: qs.get('rating') || ''
+  };
+
+  try {
+    await fetch(LOG_ENDPOINT, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' }, // évite preflight
+      body: JSON.stringify(payload)
+    });
+    d.reset();
+    document.getElementById('ok').style.display='block';
+  } catch (e) {
+    alert("Erreur d’envoi. Réessayez.");
+  }
+});
+</script>
+</body>
+</html>

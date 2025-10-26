@@ -1,0 +1,70 @@
+<script>
+  const API_BASE = 'https://script.google.com/macros/s/AKfycbzDZlUPV63mcL1a5NIq_Sj1ia0MCzUrcQX41I7yG8R85bkOsOHxFnEOoj0atOh43YZV/exec';
+  const LOG_ENDPOINT = API_BASE;
+  const LOW_STARS_MAX = 3;
+
+  (async function init(){
+    const params = new URLSearchParams(location.search);
+    const businessId = params.get('id') || '';
+    const plaqueId = params.get('plaque') || '';
+
+    if (!businessId) {
+      document.getElementById('msg').textContent = 'Paramètre ?id manquant.';
+      return;
+    }
+
+    let biz;
+    try {
+      const res = await fetch(`${API_BASE}?id=${encodeURIComponent(businessId)}`, { cache:'no-store' });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'API error');
+      biz = data;
+    } catch (e) {
+      document.getElementById('msg').textContent = 'Erreur de configuration.';
+      return;
+    }
+
+    document.getElementById('biz-name').textContent = biz.name || 'Votre expérience';
+
+    const starsEl = document.getElementById('stars');
+    const buttons = [...starsEl.querySelectorAll('button')];
+    const submit = document.getElementById('submit');
+    let rating = 0;
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        rating = Number(btn.dataset.value);
+        buttons.forEach(b => b.classList.toggle('active', Number(b.dataset.value) <= rating));
+        submit.disabled = false;
+        document.getElementById('msg').textContent = `Note sélectionnée : ${rating} ★`;
+      });
+    });
+
+    submit.addEventListener('click', async () => {
+      if (!rating) return;
+
+      const payload = {
+        ts: new Date().toISOString(),
+        business_id: businessId,
+        plaque_id: plaqueId || '',
+        rating,
+        userAgent: navigator.userAgent,
+        referer: document.referrer
+      };
+      try {
+        navigator.sendBeacon?.(LOG_ENDPOINT, JSON.stringify(payload)) ||
+        await fetch(LOG_ENDPOINT, {
+          method:'POST',
+          headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+      } catch {}
+
+      if (rating <= LOW_STARS_MAX) {
+        window.location.replace(biz.lowRatingFormUrl || '#');   // → feedback.html
+      } else {
+        window.location.replace(biz.googleReviewUrl || '#');    // → lien GMB
+      }
+    });
+  })();
+</script>
