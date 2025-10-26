@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Laissez une note</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2 9.19 8.62 2 9.24l5.46 4.73L5.82 21z"/></svg>
+      <span>Avis client</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="card-head">
+        <div class="avatar" aria-hidden="true">⭐</div>
+        <div class="titles">
+          <h1 id="biz-name">Votre expérience</h1>
+          <p class="muted">Partagez une note rapide (1 à 5 étoiles).</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Votre note</label>
+        <div class="stars" id="stars" role="radiogroup" aria-label="Choisir une note de 1 à 5">
+          <button data-value="1" aria-label="1 étoile" aria-checked="false" role="radio">★</button>
+          <button data-value="2" aria-label="2 étoiles" aria-checked="false" role="radio">★</button>
+          <button data-value="3" aria-label="3 étoiles" aria-checked="false" role="radio">★</button>
+          <button data-value="4" aria-label="4 étoiles" aria-checked="false" role="radio">★</button>
+          <button data-value="5" aria-label="5 étoiles" aria-checked="false" role="radio">★</button>
+        </div>
+        <p id="msg" class="hint"></p>
+      </div>
+
+      <button id="submit" class="btn" disabled>Envoyer</button>
+
+      <p class="tiny muted">
+        En cliquant sur « Envoyer », vous serez redirigé vers le formulaire approprié.
+      </p>
+    </section>
+  </main>
+
+  <footer class="foot muted tiny">
+    © Votre entreprise — Interface d’avis simplifiée
+  </footer>
+
+  <script>
+    // Apps Script Web App (API + logs)
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbzDZlUPV63mcL1a5NIq_Sj1ia0MCzUrcQX41I7yG8R85bkOsOHxFnEOoj0atOh43YZV/exec';
+    const LOG_ENDPOINT = API_BASE;
+    const LOW_STARS_MAX = 3; // 1..3 → Google Form, 4..5 → Google Reviews
+
+    (async function init(){
+      const params = new URLSearchParams(location.search);
+      const businessId = params.get('id') || '';
+      const plaqueId = params.get('plaque') || '';
+
+      if (!businessId) {
+        document.getElementById('msg').textContent = 'Paramètre ?id manquant.';
+        return;
+      }
+
+      // 1) Récupère la config (nom, GMB, Form)
+      let biz;
+      try {
+        const res = await fetch(`${API_BASE}?id=${encodeURIComponent(businessId)}`, { cache:'no-store' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'API error');
+        biz = data;
+      } catch (e) {
+        document.getElementById('msg').textContent = 'Erreur de configuration.';
+        return;
+      }
+
+      document.getElementById('biz-name').textContent = biz.name || 'Votre expérience';
+
+      // 2) UI étoiles
+      const starsEl = document.getElementById('stars');
+      const buttons = [...starsEl.querySelectorAll('button')];
+      const submit = document.getElementById('submit');
+      let rating = 0;
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          rating = Number(btn.dataset.value);
+          buttons.forEach(b => {
+            const active = Number(b.dataset.value) <= rating;
+            b.classList.toggle('active', active);
+            b.setAttribute('aria-checked', active ? 'true' : 'false');
+          });
+          submit.disabled = false;
+          document.getElementById('msg').textContent = `Note sélectionnée : ${rating} ★`;
+        });
+      });
+
+      // 3) Envoi + redirection
+      submit.addEventListener('click', async () => {
+        if (!rating) return;
+
+        // log non bloquant (en text/plain pour éviter le preflight)
+        const payload = {
+          ts: new Date().toISOString(),
+          business_id: businessId,
+          plaque_id: plaqueId || '',
+          rating,
+          userAgent: navigator.userAgent,
+          referer: document.referrer
+        };
+        try {
+          navigator.sendBeacon?.(LOG_ENDPOINT, JSON.stringify(payload)) ||
+          await fetch(LOG_ENDPOINT, {
+            method:'POST',
+            headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+        } catch {}
+
+        // redirection
+        const go = (url) => window.location.replace(url || '#');
+        if (rating <= LOW_STARS_MAX) go(biz.lowRatingFormUrl);
+        else go(biz.googleReviewUrl);
+      });
+    })();
+  </script>
+</body>
+</html>
